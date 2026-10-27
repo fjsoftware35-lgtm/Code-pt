@@ -49,14 +49,15 @@
     try {
       const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
         body: JSON.stringify({ mensagens: hist.slice(-6), codigo: $('#fonte').value.slice(0, 4000), erro: erros.length ? erros[erros.length - 1].textContent.slice(0, 400) : '' }) });
-      const j = await r.json();
+      const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.resposta) throw new Error(j.erro || 'sem resposta');
       hist.push({ role: 'assistant', content: j.resposta });
       espera.remove(); bolha('ia', j.resposta);
     } catch (e) {
       hist.pop(); espera.remove();
-      bolha('ia', 'Não consegui responder agora. Confirma a internet e tenta de novo daqui a pouco.');
-    } finally { clearTimeout(rel); aOcupar = false; env.disabled = false; }
+      const tempo = e.name === 'AbortError', rede = e instanceof TypeError;
+      bolha('ia', tempo ? 'O servidor demorou demasiado a responder. Tenta de novo.' : rede ? 'Não consegui ligar ao servidor. Confirma o endereço no config.js e a variável ORIGEM_PERMITIDA no Cloudflare.' : 'O servidor respondeu com um erro:\n' + e.message);
+        } finally { clearTimeout(rel); aOcupar = false; env.disabled = false; }
   }
 
   [['Explica o meu código', 'Explica o meu código passo a passo.'], ['Porque dá erro?', 'Porque é que o meu programa dá erro?'], ['Dá-me uma ideia', 'Dá-me uma ideia de exercício para praticar.']].forEach(([rot, msg]) => {
